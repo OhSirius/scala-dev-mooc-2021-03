@@ -173,10 +173,7 @@ object hof{
      * @tparam B - новый тип
      * @return - возвращаемое значение
      */
-    def map[B](f: A => B): Option[B] = this match {
-      case Option.Some(v) => Option.Some(f(v))
-      case Option.None => Option.None
-    }
+    def map[B](f: A => B): Option[B] = this.flatMap(a => Option.Some(f(a)))
 
     /**
      * Реализовать метод flatMap, который будет преобразует значение в контейнере через
@@ -196,7 +193,7 @@ object hof{
      */
     def printIfAny() = this match {
       case Option.Some(v) => println(s"Значение: $v")
-      case Option.None => ()
+      case Option.None =>
     }
 
     /**
@@ -212,7 +209,7 @@ object hof{
      *
      * Реализовать метод zip, который будет создавать Option от пары значений из 2-х Option
      */
-    def zip[B >: A](other: Option[B]): Option[(B, B)] = (this, other) match {
+    def zip[B](other: Option[B]): Option[(A, B)] = (this, other) match {
       case (Option.Some(v), Option.Some(o)) => Option.Some((v, o))
       case _ => Option.None
     }
