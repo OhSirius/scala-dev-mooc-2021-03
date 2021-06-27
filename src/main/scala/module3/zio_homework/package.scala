@@ -1,6 +1,9 @@
 package module3
 
 import zio.ZIO
+import zio.console.{Console, getStrLn, putStrLn, putStrLnErr}
+import zio.random.{Random, nextIntBetween}
+import java.io.IOException
 import scala.language.postfixOps
 
 package object zio_homework {
@@ -10,14 +13,29 @@ package object zio_homework {
    * и печатать в когнсоль угадал или нет.
    */
 
-   lazy val guessProgram = ???
+   trait Error
+   object Error
+   {
+     case class ParseError(message:String) extends Error
+     case object NotGuess extends Error
+   }
 
+   lazy val guessProgram: ZIO[Console with Random, Error, Unit] = for {
+     _           <- putStrLn("Угадайте число от 1 до 3:")
+     userValue   <- getStrLn.orDie.flatMap(str=>ZIO.fromOption(str.toIntOption).orElseFail(Error.ParseError("Не удалось привести к Int")))
+     randomValue <- nextIntBetween(1,3)
+     _           <- if(userValue==randomValue) putStrLn("Вы угадали!") else putStrLnErr("Вы не угадали") *> ZIO.fail(Error.NotGuess)
+   } yield ()
+
+   lazy val retryGuessProgram: ZIO[Console with Random, Nothing, Unit] = guessProgram.foldM(error=>putStrLnErr(s"Произошла ошибка: $error. Повторите ввод") *> retryGuessProgram, _ => ZIO.succeed(()))
 
   /**
    * 2. реализовать функцию doWhile, которая будет выполнять эффект до тех пор, пока его значение в условии не даст true
    */
 
-  def doWhile[R, E, A](body: ZIO[R, E, A])(condition: A => Boolean): ZIO[R, E, A] = ???
+   def doWhile[R, E, A](body: ZIO[R, E, A])(condition: A => Boolean): ZIO[R, E, A] = body.filterOrElse_(condition)(doWhile(body)(condition))
+
+   lazy val testDoWhile: ZIO[Console, IOException, String] = doWhile(putStrLn("Угадайте строку (hint:hello)") *> getStrLn)(_=="hello")
 
   /**
    * 3. Реализовать метод, который безопасно прочитает конфиг из файла, а в случае ошибки вернет дефолтный конфиг
@@ -39,12 +57,12 @@ package object zio_homework {
    *  4.1 Создайте эффект, который будет возвращать случайеым образом выбранное число от 0 до 10 спустя 1 секунду
    *  Используйте сервис zio Random
    */
-  val eff = ???
+  lazy val eff = ???
 
   /**
    * 4.2 Создайте коллукцию из 10 выше описанных эффектов (eff)
    */
-   val effects = ???
+   lazy val effects = ???
 
   /**
    * 4.3 Напишите программу которая вычислит сумму элементов коллекци "effects",
@@ -52,13 +70,13 @@ package object zio_homework {
    * можно использовать ф-цию printEffectRunningTime, которую мы разработали на занятиях
    */
 
-    val app = ???
+    lazy val app = ???
 
   /**
    * 4.4 Усовершенствуйте программу 4.3 так, чтобы минимизировать время ее выполнения
    */
 
-    val appSpeedUp = ???
+    lazy val appSpeedUp = ???
 
 
   /**
