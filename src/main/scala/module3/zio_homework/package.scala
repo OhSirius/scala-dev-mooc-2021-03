@@ -1,8 +1,13 @@
 package module3
 
-import zio.ZIO
+import module3.zioConcurrency.printEffectRunningTime
+import module3.zio_homework.config.{AppConfig, load}
+import zio.clock.Clock
+import zio.{IO, UIO, ZIO}
 import zio.console.{Console, getStrLn, putStrLn, putStrLnErr}
+import zio.duration.durationInt
 import zio.random.{Random, nextIntBetween}
+
 import java.io.IOException
 import scala.language.postfixOps
 
@@ -43,8 +48,7 @@ package object zio_homework {
    * Используйте эффект "load" из пакета config
    */
 
-  def loadConfigOrDefault = ???
-
+  def loadConfigOrDefault: ZIO[Console, Nothing, Unit] = (load <> UIO.succeed(AppConfig("default","default@ss.ru"))).flatMap(c=>putStrLn(c.toString()))
 
   /**
    * 4. Следуйте инструкциям ниже для написания 2-х ZIO программ,
@@ -57,12 +61,12 @@ package object zio_homework {
    *  4.1 Создайте эффект, который будет возвращать случайеым образом выбранное число от 0 до 10 спустя 1 секунду
    *  Используйте сервис zio Random
    */
-  lazy val eff = ???
+  lazy val eff:ZIO[Random with Clock, Nothing, Int] = nextIntBetween(0,10).delay(1.seconds)
 
   /**
    * 4.2 Создайте коллукцию из 10 выше описанных эффектов (eff)
    */
-   lazy val effects = ???
+   lazy val effects: List[ZIO[Random with Clock, Nothing, Int]] = List.fill(10)(eff)
 
   /**
    * 4.3 Напишите программу которая вычислит сумму элементов коллекци "effects",
@@ -70,13 +74,13 @@ package object zio_homework {
    * можно использовать ф-цию printEffectRunningTime, которую мы разработали на занятиях
    */
 
-    lazy val app = ???
+    lazy val app: ZIO[Console with Clock with Random, Nothing, Unit] = printEffectRunningTime(effects.fold(UIO.succeed(0))((acc, el)=>acc.zipWith(el)(_+_)).flatMap(v=>putStrLn(v.toString())))
 
   /**
    * 4.4 Усовершенствуйте программу 4.3 так, чтобы минимизировать время ее выполнения
    */
 
-    lazy val appSpeedUp = ???
+    lazy val appSpeedUp: ZIO[Console with Clock with Random, Nothing, Unit] = printEffectRunningTime(effects.fold(UIO.succeed(0))((acc, el)=>acc.zipWithPar(el)(_+_)).flatMap(v=>putStrLn(v.toString())))
 
 
   /**
