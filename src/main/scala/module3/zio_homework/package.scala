@@ -1,14 +1,16 @@
 package module3
-
+import module3.runningTime.RunningTimeService
 import module3.zioConcurrency.printEffectRunningTime
 import module3.zio_homework.config.{AppConfig, load}
 import zio.clock.Clock
-import zio.{IO, UIO, ZIO}
+import zio.{Has, UIO, ULayer, ZIO, ZLayer}
 import zio.console.{Console, getStrLn, putStrLn, putStrLnErr}
 import zio.duration.durationInt
+import zio.macros.accessible
 import zio.random.{Random, nextIntBetween}
 
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 import scala.language.postfixOps
 
 package object zio_homework {
@@ -87,4 +89,39 @@ package object zio_homework {
    * 5. Оформите ф-цию printEffectRunningTime разработанную на занятиях в отдельный сервис, так чтобы ее
    * молжно было использовать аналогично zio.console.putStrLn например
    */
+
+  lazy val serviceApp: ZIO[RunningTimeService with Clock with Random, Nothing, Unit] = for {
+    _ <- RunningTimeService.printEffectRunningTime(eff)
+  } yield ()
+
+  val serviceAppEnv: ULayer[RunningTimeService] =
+    Console.live ++ Clock.live >>> RunningTimeService.live
+
+  lazy val testServiceApp: ZIO[Clock with Random, Nothing, Unit] = serviceApp.provideSomeLayer[Clock with Random](serviceAppEnv)
+
+}
+
+package object runningTime {
+
+  type RunningTimeService = Has[RunningTimeService.Service]
+
+  @accessible
+  object RunningTimeService{
+
+    trait Service{
+      def printEffectRunningTime[R, E, A](zio: ZIO[R, E, A]):ZIO[R, E, A]
+    }
+
+    class ServiceImpl(console:Console.Service, clock:Clock.Service) extends Service {
+      override def printEffectRunningTime[R, E, A](zio: ZIO[R, E, A]):ZIO[R , E, A] = for{
+        start <- clock.currentTime(TimeUnit.SECONDS)
+        r <- zio
+        finish <- clock.currentTime(TimeUnit.SECONDS)
+        _ <- console.putStrLn(s"Running time ${finish - start}")
+      } yield r
+    }
+
+    val live = ZLayer.fromServices[Console.Service, Clock.Service, RunningTimeService.Service]((console, clock) => new ServiceImpl(console, clock))
+  }
+
 }
