@@ -20,18 +20,21 @@ package object zio_homework {
    * и печатать в когнсоль угадал или нет.
    */
 
-   trait Error
+   sealed trait Error
    object Error
    {
      case class ParseError(message:String) extends Error
      case object NotGuess extends Error
    }
 
+   def checkValue(value1:Int, value2:Int):Boolean=value1==value2
+
    lazy val guessProgram: ZIO[Console with Random, Error, Unit] = for {
      _           <- putStrLn("Угадайте число от 1 до 3:")
-     userValue   <- getStrLn.orDie.flatMap(str=>ZIO.fromOption(str.toIntOption).orElseFail(Error.ParseError("Не удалось привести к Int")))
+     str         <- getStrLn.orDie
+     userValue   <- ZIO.fromOption(str.toIntOption).mapError(_=>Error.ParseError("Не удалось привести к Int"))
      randomValue <- nextIntBetween(1,3)
-     _           <- if(userValue==randomValue) putStrLn("Вы угадали!") else putStrLnErr("Вы не угадали") *> ZIO.fail(Error.NotGuess)
+     _           <- if(checkValue(userValue,randomValue)) putStrLn("Вы угадали!") else putStrLnErr("Вы не угадали") *> ZIO.fail(Error.NotGuess)
    } yield ()
 
    lazy val retryGuessProgram: ZIO[Console with Random, Nothing, Unit] = guessProgram.foldM(error=>putStrLnErr(s"Произошла ошибка: $error. Повторите ввод") *> retryGuessProgram, _ => ZIO.succeed(()))
@@ -90,38 +93,37 @@ package object zio_homework {
    * молжно было использовать аналогично zio.console.putStrLn например
    */
 
-  lazy val serviceApp: ZIO[RunningTimeService with Clock with Random, Nothing, Unit] = for {
+  lazy val serviceApp: ZIO[RunningTimeService with Clock with Random with Console, Nothing, Unit] = for {
     _ <- RunningTimeService.printEffectRunningTime(eff)
   } yield ()
 
   val serviceAppEnv: ULayer[RunningTimeService] =
-    Console.live ++ Clock.live >>> RunningTimeService.live
+    Clock.live >>> RunningTimeService.live
 
-  lazy val testServiceApp: ZIO[Clock with Random, Nothing, Unit] = serviceApp.provideSomeLayer[Clock with Random](serviceAppEnv)
+  lazy val testServiceApp: ZIO[Clock with Console with Random, Nothing, Unit] = serviceApp.provideSomeLayer[Clock with Console with Random](serviceAppEnv)
 
 }
 
 package object runningTime {
-
   type RunningTimeService = Has[RunningTimeService.Service]
 
   @accessible
   object RunningTimeService{
 
     trait Service{
-      def printEffectRunningTime[R, E, A](zio: ZIO[R, E, A]):ZIO[R, E, A]
+      def printEffectRunningTime[R, E, A](zio: ZIO[R, E, A]):ZIO[R with Console, E, A]
     }
 
-    class ServiceImpl(console:Console.Service, clock:Clock.Service) extends Service {
-      override def printEffectRunningTime[R, E, A](zio: ZIO[R, E, A]):ZIO[R , E, A] = for{
+    class ServiceImpl(clock:Clock.Service) extends Service {
+      override def printEffectRunningTime[R, E, A](zio: ZIO[R, E, A]):ZIO[R with Console, E, A] = for{
         start <- clock.currentTime(TimeUnit.SECONDS)
         r <- zio
         finish <- clock.currentTime(TimeUnit.SECONDS)
-        _ <- console.putStrLn(s"Running time ${finish - start}")
+        _ <- putStrLn(s"Running time ${finish - start}")
       } yield r
     }
 
-    val live = ZLayer.fromServices[Console.Service, Clock.Service, RunningTimeService.Service]((console, clock) => new ServiceImpl(console, clock))
+    val live = ZLayer.fromService[Clock.Service, RunningTimeService.Service]((clock) => new ServiceImpl(clock))
   }
 
 }
