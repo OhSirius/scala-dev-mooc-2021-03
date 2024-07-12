@@ -138,42 +138,91 @@ object hof{
    *
    * Реализовать тип Option, который будет указывать на присутствие либо отсутсвие результата
    */
-
-   // Animal
-   // Dog extend Animal
-  // Option[Dog] Option[Animal]
-
-   sealed trait Option[+A]{
+   sealed trait Option[+A] {
+    /**
+     *
+     * Реализовать метод isEmpty, который будет возвращать true если Option не пуст и false в противном случае
+     */
     def isEmpty: Boolean = this match {
       case Option.Some(_) => false
       case Option.None => true
     }
 
+    /**
+     *
+     * Реализовать метод get, который будет возвращать значение
+     */
     def get: A = this match {
       case Option.Some(v) => v
       case Option.None => throw new Exception("Get on empty list")
     }
 
-
+    /**
+     *
+     * Реализовать метод get, который будет возвращать значение если Option не пуст и false в противном случае значение по-умолчанию
+     */
     def getOrElse[B >: A](b: B): B = this match {
       case Option.Some(v) => v
       case Option.None => b
     }
 
-    def map[B](f: A => B): Option[B] = this match {
-      case Option.Some(v) => Option.Some(f(v))
+    /**
+     * Реализовать метод map, который будет преобразует значение в контейнере через
+     *
+     * @param f - ф-ия преобразования
+     * @tparam B - новый тип
+     * @return - возвращаемое значение
+     */
+    def map[B](f: A => B): Option[B] = this.flatMap(a => Option.Some(f(a)))
+
+    /**
+     * Реализовать метод flatMap, который будет преобразует значение в контейнере через
+     *
+     * @param f
+     * @tparam B
+     * @return
+     */
+    def flatMap[B](f: A => Option[B]): Option[B] = this match {
+      case Option.Some(v) => f(v)
       case Option.None => Option.None
     }
 
-    def flatMap[B](f: A => Option[B]): Option[B] = ???
+    /**
+     *
+     * Реализовать метод printIfAny, который будет печатать значение, если оно есть
+     */
+    def printIfAny() = this match {
+      case Option.Some(v) => println(s"Значение: $v")
+      case Option.None =>
+    }
 
-    // val i : Option[Int]  i.map(v => v + 1)
+    /**
+     *
+     * реализовать метод orElse который будет возвращать другой Option, если данный пустой
+     */
+    def orElse[B >: A](other: Option[B]): Option[B] = this match {
+      case Option.Some(_) => this
+      case Option.None => other
+    }
 
+    /**
+     *
+     * Реализовать метод zip, который будет создавать Option от пары значений из 2-х Option
+     */
+    def zip[B](other: Option[B]): Option[(A, B)] = (this, other) match {
+      case (Option.Some(v), Option.Some(o)) => Option.Some((v, o))
+      case _ => Option.None
+    }
 
-    def f(x: Int, y: Int): Option[Int] =
-      if(y == 0) Option.None
-      else Option.Some(x / y)
-
+    /**
+     *
+     * Реализовать метод filter, который будет возвращать не пустой Option
+     * в случае если исходный не пуст и предикат от значения = true
+     */
+    def filter[B >: A](predicate: B => Boolean): Option[B] = this match {
+      case Option.Some(v) if predicate(v) => Option.Some(v)
+      case Option.None => Option.None
+    }
 
   }
 
@@ -183,38 +232,15 @@ object hof{
    }
 
 
-  /**
-   *
-   * Реализовать метод printIfAny, который будет печатать значение, если оно есть
-   */
-
-  /**
-   *
-   * реализовать метод orElse который будет возвращать другой Option, если данный пустой
-   */
 
 
-  /**
-   *
-   * Реализовать метод isEmpty, который будет возвращать true если Option не пуст и false в противном случае
-   */
 
 
-  /**
-   *
-   * Реализовать метод get, который будет возвращать значение
-   */
-
-  /**
-   *
-   * Реализовать метод zip, который будет создавать Option от пары значений из 2-х Option
-   */
 
 
-  /**
-   *
-   * Реализовать метод filter, который будет возвращать не пустой Option
-   * в случае если исходный не пуст и предикат от значения = true
-   */
+
+
+
+
 
  }
